@@ -8,16 +8,23 @@
 
 ## **👉 Unity enviroment `Tennis` vector game (Project Submission)**  
 
+* check the [project information](https://github.com/Nov05/udacity-deep-reinforcement-learning/tree/master/p3_collab-compet) (multi-agent reinforcement learning (MARL))    
+* check the [course notes](https://www.evernote.com/shard/s139/sh/3207cf3f-bcca-a008-c221-45bbd101af72/qBMCR47uxmw1ied7hOLgWCxDfJFWUgoKErH3sbCLoIOTVUIw0x_YVyPiBw)    
+
 ✅ **setup Python environment**   
 * [notes for env setup](https://gist.github.com/Nov05/36ed6fff08f16f29c364090844eb1d24)  
 * [notes for issues](https://gist.github.com/Nov05/1d49183a91456a63e13782e5f49436be?permalink_comment_id=4935583#gistcomment-4935583)
+
+✅ **reference**  
+* [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://proceedings.neurips.cc/paper_files/paper/2017/file/68a9750337a418a86fe06c1991a1d64c-Paper.pdf)  
+
 
 ---  
 
 ## **👉 AlphaZero**  
 
 * [Tic-Tac-Toe notebook](https://nbviewer.org/github/Nov05/udacity-deep-reinforcement-learning/blob/master/alphazero/alphazero-TicTacToe.ipynb)  
-  [Tic-Tac-Toe-advanced notebook](https://nbviewer.org/github/Nov05/udacity-deep-reinforcement-learning/blob/master/alphazero/alphazero-TicTacToe.ipynb)  
+  [Tic-Tac-Toe-advanced notebook](https://github.com/Nov05/udacity-deep-reinforcement-learning/blob/master/alphazero/alphazero-TicTacToe-advanced.ipynb)  
   &nbsp;  
   <img src="https://raw.githubusercontent.com/Nov05/pictures/master/Udacity/20231221_reinforcement%20learning/20240416_alphazero.jpg" width=400>  
 
