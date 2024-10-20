@@ -125,6 +125,7 @@ class OriginalReturnWrapper(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
         self.total_reward = 0
 
+
     def step(self, action):
         observation, reward, done, info = self.env.step(action)
         self.total_reward += reward
@@ -134,6 +135,7 @@ class OriginalReturnWrapper(gym.Wrapper):
         else:
             info['episodic_return'] = None
         return observation, reward, done, info
+
 
     def reset(self):
         return self.env.reset()
@@ -149,6 +151,7 @@ class TransposeImage(gym.ObservationWrapper):
             self.observation_space.high[0, 0, 0],
             [obs_shape[2], obs_shape[1], obs_shape[0]],
             dtype=self.observation_space.dtype)
+
 
     def observation(self, observation):
         return observation.transpose(2, 0, 1)
@@ -167,14 +170,17 @@ class LazyFrames(object):
         You'd not believe how complex the previous solution was."""
         self._frames = frames
 
+
     def __array__(self, dtype=None):
         out = np.concatenate(self._frames, axis=0)
         if dtype is not None:
             out = out.astype(dtype)
         return out
 
+
     def __len__(self):
         return len(self.__array__())
+
 
     def __getitem__(self, i):
         return self.__array__()[i]
@@ -184,6 +190,7 @@ class LazyFrames(object):
 class FrameStack(FrameStack_):
     def __init__(self, env, k):
         FrameStack_.__init__(self, env, k)
+
 
     def _get_ob(self):
         assert len(self.frames) == self.k
@@ -229,10 +236,13 @@ class DummyVecEnv(VecEnv):
 
 def get_unity_spaces(brain_params: BrainParameters): 
     """
-    tranlate Unity ML-Agents spaces to gym spaces for compatibility with deeprl and Baselines 
+    tranlate Unity ML-Agents spaces to gym spaces for compatibility with the deeprl and Baselines packages
     """
     if brain_params.vector_observation_space_type=='continuous':
-        observation_space = Box(float('-inf'), float('inf'), (brain_params.vector_observation_space_size,), np.float64)
+        observation_space = Box(
+            float('-inf'), float('inf'), 
+            (brain_params.vector_observation_space_size*brain_params.num_stacked_vector_observations,), 
+            np.float64)
     else:
         raise NotImplementedError
     if brain_params.vector_action_space_type=='continuous':
@@ -244,7 +254,7 @@ def get_unity_spaces(brain_params: BrainParameters):
 
 
 def get_return_from_brain_info(brain_info: BrainInfo, brain_name):
-    if brain_name in ['ReacherBrain']:
+    if brain_name in ['ReacherBrain', 'TennisBrain']:
         observation = brain_info.vector_observations 
     else:
         raise NotImplementedError
@@ -351,7 +361,7 @@ def unity_worker(remote, parent_remote, env_fn_wrapper, train_mode):
                 remote.send((observation, reward, done, info))
                 print('🟢 Unity environment has been resetted.')
             elif cmd=='close':
-                remote.close()
+                remote.close() 
                 break
             elif cmd=='get_brain_params':
                 brain_params = env.brains[brain_name] ## brain_params: type class BrainParameters
@@ -447,7 +457,7 @@ class UnitySubprocVecEnv(VecEnv):
             p.join()
 
     def _assert_not_closed(self):
-        assert not self.closed, "⚠️ Trying to operate on a UnitySubprocVecEnv after calling close()"
+        assert not self.closed, "⚠️ Trying to operate on a UnitySubprocVecEnv object after calling close()"
 
     def __del__(self):
         if not self.closed:
@@ -466,7 +476,7 @@ class Task:
                  log_dir=None,
                  episode_life=True):
         '''
-        20240310 added logic for unity
+        2024-03-10 added logic for unity
         '''
         ## input parameters
         self.game = game
@@ -524,6 +534,7 @@ class Task:
                 Wrapper = SubprocVecEnv
         self.envs_wrapper = Wrapper(**kwargs)
             
+        ## get dimensions for different spaces    
         self.observation_space = self.envs_wrapper.observation_space
         self.state_dim = int(np.prod(self.observation_space.shape))
         self.action_space = self.envs_wrapper.action_space
@@ -533,7 +544,8 @@ class Task:
             self.action_dim = self.action_space.shape[0]
         else:
             assert 'unknown action space'
-        
+  
+
     def reset(self, train_mode=None):
         ## train_mode is for unity envs only
         kwargs = {}
@@ -543,10 +555,12 @@ class Task:
             kwargs['train_mode'] = self.train_mode
         return self.envs_wrapper.reset(**kwargs)
         
+
     def step(self, actions):
         if isinstance(self.action_space, Box): 
             actions = np.clip(actions, self.action_space.low, self.action_space.high)
         return self.envs_wrapper.step(actions)
+    
     
     def close(self):
         return self.envs_wrapper.close()

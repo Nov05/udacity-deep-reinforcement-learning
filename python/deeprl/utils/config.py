@@ -23,8 +23,8 @@ class Config:
         self.task_name = None  ## task.game
         self.state_dim = None
         self.action_dim = None
-        self.task_fn = None  ## task env func; set either config.task or config.task_fn
-        self._task = None  ## task env; set either config.task or config.task_fn
+        self.task_fn = None  ## task env func; set either config._task or config.task_fn
+        self._task = None  ## task env; set either config._task or config.task_fn
         self.num_workers = 1  ## task env number
         self.env_fn_kwargs = dict()  ## task env func kwargs
         self._eval_env = None
@@ -32,7 +32,7 @@ class Config:
         self.env_fn_kwargs_eval = dict()  ## eval env func kwargs
         self.tasks = None
         ## log
-        self.tag = 'vanilla'  ## for logs
+        self.tag = 'vanilla'  ## tag for logs
         self.by_episode = False  ## control by step/interval; True: by episode
         self.log_interval = int(1e3)  ## steps
         self.log_level = 0

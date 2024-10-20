@@ -5,6 +5,8 @@
 #######################################################################
 ## refactored for multi-envs and multi-agents (in one env) by nov05 in 2024-04
 
+
+
 import torch.nn.functional as F
 ## local imports
 from ..network import *
@@ -30,7 +32,7 @@ class DDPGAgent(BaseAgent):
     def step(self):
         ## reset the task (envs)
         if self.states is None:
-            self.random_process.reset_states()
+            self.random_process.reset_states() ## denoted as 𝒩 in the paper
             self.states = self._reset_task(self.task)
             self.states = self.config.state_normalizer(self.states)
 
@@ -42,7 +44,7 @@ class DDPGAgent(BaseAgent):
             with torch.no_grad():
                 ## add noise with decay
                 actions = to_np(self.network(self.states)) \
-                        + self.random_process.sample()*(1/np.sqrt(self.total_episodes+1)) 
+                        + self.random_process.sample()*(1/np.sqrt(self.total_episodes+1))  ## denoted as 𝒩_t in the paper
             self.network.train()
         actions = self._reshape_for_task(self.task, actions)
         ## task will clip when step. however, actions have to be clipped here for replay buffer
@@ -66,10 +68,10 @@ class DDPGAgent(BaseAgent):
         ))
         self.states = next_states_
 
-        ## sample config.mini_batch_size of transition sequences from the replay buffer
+        ## sample config.mini_batch_size (denoted as S) of transition sequences from the replay buffer
         ## update neural networks
         if self.replay.size() >= self.config.warm_up \
-        and self.total_steps%self.config.replay_interval==0:  ## replay every 2 steps
+        and self.total_steps%self.config.replay_interval==0:  ## replay every interval steps
             
             transitions = self.replay.sample()  ## batch_size is set in config.replay_fn
             states = tensor(transitions.state)

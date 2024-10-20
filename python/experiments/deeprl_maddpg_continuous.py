@@ -1,6 +1,5 @@
 from torch import nn
 import torch.nn.functional as F
-import argparse
 
 ## local imports
 from deeprl import *
@@ -14,27 +13,29 @@ from deeprl.utils.misc import rmdir, run_episodes, eval_episodes
 ## 3. refer to "\tests2\test_deeprl_envs.py"
 ##    $ python -m tests2.test_deeprl_envs
 
-def ddpg_continuous(**kwargs): 
+def maddpg_continuous(**kwargs): 
     generate_tag(kwargs)
     kwargs.setdefault('log_level', 0)
     config = Config()
     config.merge(kwargs)
 
-    ## train
-    config.task = Task(config.game, 
-                       num_envs=config.num_workers,
-                       env_fn_kwargs=config.env_fn_kwargs, 
-                       train_mode=True,
-                       single_process=False)
     config.by_episode = True  ## control by episode; if false, by step
-    config.max_episodes = 161
+    config.max_episodes = 1
 
-    ## eval
-    config.eval_env = Task(config.game, 
-                           num_envs=config.num_workers_eval,
-                           env_fn_kwargs=config.env_fn_kwargs_eval, 
-                           train_mode=False,
+    ## train
+    if config.num_workers:
+        config.task = Task(config.game, 
+                           num_envs=config.num_workers,
+                           env_fn_kwargs=config.env_fn_kwargs, 
+                           train_mode=True,
                            single_process=False)
+    ## eval
+    if config.num_workers_eval:
+        config.eval_env = Task(config.game, 
+                               num_envs=config.num_workers_eval,
+                               env_fn_kwargs=config.env_fn_kwargs_eval, 
+                               train_mode=False,
+                               single_process=False)
     config.eval_episodes = num_eval_episodes  ## eval n episodes per interval
     config.eval_episode_interval = 10
     config.eval_after_episodes = 10
@@ -42,11 +43,11 @@ def ddpg_continuous(**kwargs):
     ## save
     config.save_after_episodes = 140 ## save model
     config.save_episode_interval = 5 ## save model
-
+    
     ## neural network
     config.network_fn = lambda: DeterministicActorCriticNet(
-        config.state_dim,  
-        config.action_dim,  
+        config.state_dim,   ## input length
+        config.action_dim,   ## output length
         actor_body=FCBody(config.state_dim, (128,128), gate=nn.LeakyReLU, 
                           init_method='uniform_fan_in', 
                           batch_norm=nn.BatchNorm1d,),
@@ -72,8 +73,8 @@ def ddpg_continuous(**kwargs):
     config.target_network_mix = 1e-3  ## τ: soft update rate=0.1%, trg = trg*(1-τ) + src*τ
 
     if is_training:
-        # run_steps(DDPGAgent(config))
-        run_episodes(DDPGAgent(config))
+        # run_steps(DDPGAgent(config))  ## log by steps
+        run_episodes(DDPGAgent(config))  ## log by episodes
     else:
         config.save_filename = save_filename
         eval_episodes(DDPGAgent(config))
@@ -83,21 +84,20 @@ def ddpg_continuous(**kwargs):
 if __name__ == '__main__':
 
 
-    # # Create an ArgumentParser object
-    # parser = argparse.ArgumentParser()
-    # # Add arguments
-    # parser.add_argument('-it', '--is_training', required=True, help='Whether it is a training task')
-    # # Parse arguments
-    # args = parser.parse_args()
-    # # Use the arguments
-    # is_training = args.is_training
-    is_training = True
-  
-    ## path to the game file
-    env_file_name = '..\data\Reacher_Windows_x86_64_1\Reacher.exe'
-    # env_file_name = '..\data\Reacher_Windows_x86_64_20\Reacher.exe'
-    ## path to the saved torch model file
-    save_filename = '.\experiments\ddpg_unity-reacher-v2\DDPGAgent-unity-reacher-v2-remark_ddpg_continuous-run-0-155'  
+    # Create an ArgumentParser object
+    parser = argparse.ArgumentParser()
+    # Add arguments
+    parser.add_argument('-it', '--is_training', required=True, help='Whether it is a training task')
+    # Parse arguments
+    args = parser.parse_args()
+    # Use the arguments
+    is_training = args.is_training
+
+    ## game file path
+    env_file_name = '..\data\Tennis_Windows_x86_64\Tennis.exe'
+    ## path to the saved torch model
+    # save_filename = '.\experiments\ddpg_unity-reacher-v2\DDPGAgent-unity-reacher-v2-remark_ddpg_continuous-run-0-155' 
+    save_filename = None 
 
     set_one_thread() 
     random_seed()
@@ -106,46 +106,49 @@ if __name__ == '__main__':
         # $ python -m tests2.test_rmdir
         ## remove all log and saved files
         try:
-            rmdir('data')
+            rmdir('data') ## remove dir ..\python\data (included in the gitignored file) 
         except:
             pass
-        mkdir('data\\log')  ## readable logs
-        mkdir('data\\tf_log')  ## tensorflow logs
-        mkdir('data\\models')  ## trained models
+        mkdir('data\\log')  ## human readable logs ..\python\data\log
+        mkdir('data\\tf_log')  ## tensorflow logs ..\python\data\tf_log
+        mkdir('data\\models')  ## trained models ..\python\data\models
         select_device(0) ## 0: GPU, an non-negative integer is the index of GPU
         num_envs = 1
-        num_envs_eval = 3
+        num_envs_eval = 2
         offset = 0
         eval_no_graphics = True
         num_eval_episodes = 2
     else:
-        select_device(0)  ## -1: CPU
-        num_envs = 1
+        select_device(0)  ## 0: GPU, -1: CPU
+        num_envs = 0
         num_envs_eval = 4
         ## if run train and test in the same terminal session, skip the training port range to avoid potential conflict.
-        ## e.g. for training num_envs=1, num_envs_eval=3, hence Unity env port offset=4
-        offset = 4  
+        ## e.g. for training num_envs=1, num_envs_eval=2, Unity env port offset=3
+        offset = 3
         eval_no_graphics = False
         num_eval_episodes = 2
 
     env_fn_kwargs = {'file_name': env_file_name, 'no_graphics': True, 'base_port':5005+offset}
     env_fn_kwargs_eval = {'file_name': env_file_name, 'no_graphics': eval_no_graphics, 
                           'base_port':5005+offset+num_envs}
-    ddpg_continuous(game='unity-reacher-v2', 
-                    run=0,
-                    env_fn_kwargs=env_fn_kwargs,
-                    env_fn_kwargs_eval=env_fn_kwargs_eval,
-                    num_workers=num_envs,
-                    num_workers_eval=num_envs_eval,
-                    remark=ddpg_continuous.__name__)
+    maddpg_continuous(game='unity-tennis', 
+                      run=0,
+                      env_fn_kwargs=env_fn_kwargs,
+                      env_fn_kwargs_eval=env_fn_kwargs_eval,
+                      num_workers=num_envs,
+                      num_workers_eval=num_envs_eval,
+                      remark=maddpg_continuous.__name__)
     
 
 
-## $ python -m experiments.deeprl_ddpg_continuous    <- run this file, train or eval unity reacher
-## $ python -m experiments.deeprl_ddpg_plot          <- plot tensorflow log data (tf_log)
-## $ python -m deeprl_files.examples                 <- train mujoco reacher
-## $ python -m tests2.test_deeprl_envs               <- test unity envs
-## $ python -m tests2.test_rmdir                     <- delete logs, models, plots. run with caution
+## make sure it is in the "drlnd_py310" env.
+## $ cd python 
+## $ python -m experiments.deeprl_maddpg_continuous --is_training True    <- run this file, train or eval unity reacher
+## $ python -m experiments.deeprl_maddpg_plot                             <- plot tensorflow log data (tf_log)
+## $ python -m deeprl_files.examples                                      <- train mujoco reacher
+## $ python -m tests2.test_deeprl_envs                                    <- test unity envs
+## $ python -m tests2.test_rmdir                                          <- delete logs, models, plots. run with caution
+
 
 ## example network architecture for "unity-reacher-v2"
 ## check the example log file

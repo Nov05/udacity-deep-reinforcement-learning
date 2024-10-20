@@ -93,9 +93,9 @@ def run_episodes(agent):
         ## log eval result (including episode 0)
         if config.eval_episode_interval and agent.total_episodes>=config.eval_after_episodes \
         and (not agent.total_episodes%config.eval_episode_interval):
-            agent.network.eval()
+            agent.network.eval()  ## switch the nerual network to eval mode
             agent.eval_episodes(by_episode=config.by_episode)
-            agent.network.train()
+            agent.network.train()  ## switch the nuerual network to train mode
 
         while True:
             agent.step()

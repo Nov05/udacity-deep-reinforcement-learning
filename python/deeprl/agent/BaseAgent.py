@@ -26,14 +26,18 @@ class BaseAgent:
         self.total_episodes = 0  ## added by nov05
         self.episode_done = False   ## all envs have done an episode, added by nov05
 
+
     def close(self):
         try:
-            close_obj(self.eval_task)
-            print(f"🟢 Eval task {self.eval_task} has been closed.")
+            close_obj(self.config._eval_env)
+            print(f"🟢 Eval envs {self.config._eval_env} have been closed.") 
         except:
             pass
-        close_obj(self.task)
-        print(f"🟢 Task {self.task} has been closed.")
+        try:
+            close_obj(self.task)  ## aka. train trask, train envs
+            print(f"🟢 Train task {self.task} has been closed.")
+        except:
+            pass
 
 
     def save(self, filename):

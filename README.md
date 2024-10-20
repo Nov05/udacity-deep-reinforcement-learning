@@ -4,6 +4,8 @@
 * [notes for env setup](https://gist.github.com/Nov05/36ed6fff08f16f29c364090844eb1d24)  
 * [notes for issues](https://gist.github.com/Nov05/1d49183a91456a63e13782e5f49436be?permalink_comment_id=4935583#gistcomment-4935583)
 
+<br><br><br>  
+
 ---  
 
 ## **👉 Unity enviroment `Tennis` vector game (Project Submission)**  
@@ -11,13 +13,47 @@
 * check the [project information](https://github.com/Nov05/udacity-deep-reinforcement-learning/tree/master/p3_collab-compet) (multi-agent reinforcement learning (MARL))    
 * check the [course notes](https://www.evernote.com/shard/s139/sh/3207cf3f-bcca-a008-c221-45bbd101af72/qBMCR47uxmw1ied7hOLgWCxDfJFWUgoKErH3sbCLoIOTVUIw0x_YVyPiBw)    
 
+In this environment, two agents control rackets to bounce a ball over a net. If an agent hits the ball over the net, it receives a reward of +0.1.  If an agent lets a ball hit the ground or hits the ball out of bounds, it receives a reward of -0.01.  Thus, the goal of each agent is to keep the ball in play.
+
+The observation space consists of 8 variables corresponding to the position and velocity of the ball and racket. Each agent receives its own, local observation.  Two continuous actions are available, corresponding to movement toward (or away from) the net, and jumping. 
+
+The task is episodic, and in order to solve the environment, your agents must get an average score of +0.5 (over 100 consecutive episodes, after taking the maximum over both agents). Specifically,
+
+- After each episode, we add up the rewards that each agent received (without discounting), to get a score for each agent. This yields 2 (potentially different) scores. We then take the maximum of these 2 scores.
+- This yields a single **score** for each episode.
+
+The environment is considered solved, when the average (over 100 episodes) of those **scores** is at least +0.5.
+ 
+
 ✅ **setup Python environment**   
 * [notes for env setup](https://gist.github.com/Nov05/36ed6fff08f16f29c364090844eb1d24)  
 * [notes for issues](https://gist.github.com/Nov05/1d49183a91456a63e13782e5f49436be?permalink_comment_id=4935583#gistcomment-4935583)
 
-✅ **reference**  
-* [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://proceedings.neurips.cc/paper_files/paper/2017/file/68a9750337a418a86fe06c1991a1d64c-Paper.pdf)  
 
+✅ **reference**  
+* [Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments](https://proceedings.neurips.cc/paper_files/paper/2017/file/68a9750337a418a86fe06c1991a1d64c-Paper.pdf)   
+https://arxiv.org/pdf/1706.02275   
+<img src="https://raw.githubusercontent.com/Nov05/pictures/refs/heads/master/Udacity/20231221_reinforcement%20learning/2024-10-18%2023_11_36-Multi-Agent%20Deep%20Deterministic%20Policy%20Gradient%20for%20N%20agents.jpg" width=500>  
+
+
+✅ **coding**
+* add the brain name **'TennisBrain'** in `..\python\deeprl\component\envs.py` function `get_return_from_brain_info`.    
+* An env has 2 agents playing with each other. Refer to [this notebook](https://github.com/Nov05/udacity-deep-reinforcement-learning/blob/master/p3_collab-compet/Tennis.ipynb).  
+``` 
+  Number of agents: 2
+  Size of each action: 2
+  There are 2 agents. Each observes a state with length: 24
+  The actions for the 2 agents look like:
+  [[0.74462557, -0.91233826], 
+   [0.30700633,  0.4461334 ]]
+  The state for the first agent looks like: 
+  [ 0.          0.          0.          0.          0.          0.
+    0.          0.          0.          0.          0.          0.
+    0.          0.          0.          0.         -6.65278625 -1.5
+   -0.          0.          6.83172083  6.         -0.          0.        ]
+```
+
+<br><br><br>  
 
 ---  
 
@@ -27,6 +63,9 @@
   [Tic-Tac-Toe-advanced notebook](https://github.com/Nov05/udacity-deep-reinforcement-learning/blob/master/alphazero/alphazero-TicTacToe-advanced.ipynb)  
   &nbsp;  
   <img src="https://raw.githubusercontent.com/Nov05/pictures/master/Udacity/20231221_reinforcement%20learning/20240416_alphazero.jpg" width=400>  
+
+
+<br><br><br>  
 
 ---  
 
@@ -113,7 +152,8 @@
 * https://arxiv.org/abs/1509.02971  
   <img src="https://raw.githubusercontent.com/Nov05/pictures/master/Udacity/20231221_reinforcement%20learning/20240410_ddpg_arxiv1509.02971.jpg" width=500>  
   
-<br>  
+
+<br><br><br>   
 
 ---
 
@@ -125,7 +165,7 @@
   * PPO without clipping: [Colab](https://drive.google.com/file/d/17-HyqTB121RjHvJ03GzY81eGxmmpjY3t), [GitHub](https://github.com/Nov05/Google-Colaboratory/blob/master/20240217_pong_REINFORCE.ipynb)   
   * PPO with clipping, [Colab](https://drive.google.com/file/d/1lAvn0_pPyFBnWJ4HPyXfVBhh7qjPo2gP), [GitHub](https://github.com/Nov05/Google-Colaboratory/blob/master/20240218_pong_PPO.ipynb)    
 
-<br>  
+<br><br><br>   
 
 ---  
 
@@ -187,7 +227,7 @@
 	* [Video recording](https://youtu.be/SwAwWLsa9f0?t=35) (which demonstrates how trained models are run on the local machine)  
     * [Project submission repo](https://github.com/Nov05/udacity-drlnd-p1_navigation-submission)  
 
-<br>  
+<br><br><br>  
 
 ---
 
@@ -200,7 +240,7 @@
 2024-02-11 Unity MLAgent [Banana env set up](https://gist.github.com/Nov05/bf63ac7e0a2d0f94a635fb3858894cca)  
 2024-02-10 repo cloned  
 
-<br>  
+<br><br><br>  
 
 ---
 
