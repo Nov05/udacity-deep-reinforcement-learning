@@ -4,6 +4,7 @@ import torch.nn.functional as F
 ## local imports
 from deeprl import *
 from deeprl.utils.misc import rmdir, run_episodes, eval_episodes
+from deeprl.agent.MADDPG_agent import MADDPGAgent
 
 
 
@@ -13,6 +14,8 @@ from deeprl.utils.misc import rmdir, run_episodes, eval_episodes
 ## 3. refer to "\tests2\test_deeprl_envs.py"
 ##    $ python -m tests2.test_deeprl_envs
 
+
+
 def maddpg_continuous(**kwargs): 
     generate_tag(kwargs)
     kwargs.setdefault('log_level', 0)
@@ -20,7 +23,7 @@ def maddpg_continuous(**kwargs):
     config.merge(kwargs)
 
     config.by_episode = True  ## control by episode; if false, by step
-    config.max_episodes = 1
+    config.max_episodes = 20
 
     ## train
     if config.num_workers:
@@ -73,11 +76,11 @@ def maddpg_continuous(**kwargs):
     config.target_network_mix = 1e-3  ## τ: soft update rate=0.1%, trg = trg*(1-τ) + src*τ
 
     if is_training:
-        # run_steps(DDPGAgent(config))  ## log by steps
-        run_episodes(DDPGAgent(config))  ## log by episodes
+        # run_steps(MADDPGAgent(config))  ## log by steps
+        run_episodes(MADDPGAgent(config))  ## log by episodes
     else:
         config.save_filename = save_filename
-        eval_episodes(DDPGAgent(config))
+        eval_episodes(MADDPGAgent(config))
 
 
 
@@ -141,34 +144,33 @@ if __name__ == '__main__':
     
 
 
-## make sure it is in the "drlnd_py310" env.
-## $ cd python 
-## $ python -m experiments.deeprl_maddpg_continuous --is_training True    <- run this file, train or eval unity reacher
+## make sure you are using the "drlnd_py310" kernel.
+## $ cd python                                                            <- set the current working directory
+## $ python -m experiments.deeprl_maddpg_continuous --is_training True    <- run this file, train or eval unity tennis
 ## $ python -m experiments.deeprl_maddpg_plot                             <- plot tensorflow log data (tf_log)
 ## $ python -m deeprl_files.examples                                      <- train mujoco reacher
 ## $ python -m tests2.test_deeprl_envs                                    <- test unity envs
 ## $ python -m tests2.test_rmdir                                          <- delete logs, models, plots. run with caution
 
-
-## example network architecture for "unity-reacher-v2"
+## example network architecture for "unity-tennis"
 ## check the example log file
 '''
 DeterministicActorCriticNet(
   (phi_body): DummyBody()
   (actor_body): FCBody(
     (layers): ModuleList(
-      (0): Linear(in_features=33, out_features=128, bias=True)
+      (0): Linear(in_features=24, out_features=128, bias=True)
       (1): LeakyReLU(negative_slope=0.01)
       (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
       (3): Linear(in_features=128, out_features=128, bias=True)
       (4): LeakyReLU(negative_slope=0.01)
-      (5): Linear(in_features=128, out_features=4, bias=True)
+      (5): Linear(in_features=128, out_features=2, bias=True)
       (6): Tanh()
     )
   )
   (critic_body): FCBody(
     (layers): ModuleList(
-      (0): Linear(in_features=37, out_features=128, bias=True)
+      (0): Linear(in_features=26, out_features=128, bias=True)
       (1): LeakyReLU(negative_slope=0.01)
       (2): BatchNorm1d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
       (3): Linear(in_features=128, out_features=128, bias=True)

@@ -94,8 +94,8 @@ if __name__ == '__main__':
     is_training = True
   
     ## path to the game file
-    env_file_name = '..\data\Reacher_Windows_x86_64_1\Reacher.exe'
-    # env_file_name = '..\data\Reacher_Windows_x86_64_20\Reacher.exe'
+    # env_file_name = '..\data\Reacher_Windows_x86_64_1\Reacher.exe'
+    env_file_name = '..\data\Reacher_Windows_x86_64_20\Reacher.exe'
     ## path to the saved torch model file
     save_filename = '.\experiments\ddpg_unity-reacher-v2\DDPGAgent-unity-reacher-v2-remark_ddpg_continuous-run-0-155'  
 

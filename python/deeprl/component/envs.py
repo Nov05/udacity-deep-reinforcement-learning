@@ -3,7 +3,9 @@
 # Permission given to modify the code as long as you keep this        #
 # declaration at the top                                              #
 #######################################################################
-## changed by nov05, 20240304
+## added functionalities for the Unity environment, changed by nov05, 2024-03-04
+
+
 
 # import os
 import gym
@@ -39,8 +41,6 @@ if not sys.warnoptions:  # allow overriding with `-W` option
     warnings.filterwarnings('ignore', category=RuntimeWarning, module='runpy')
 gym.logger.set_level(40)   
 
-
-
 ## added by nov05
 import multiprocessing as mp
 import dm_control2gym
@@ -57,6 +57,8 @@ env_fn_mappings = {'dm': dm_control2gym.make,
                    'gym': gym.make,
                    'unity': make_unity}
 
+
+
 def get_env_type(game=None, env=None):
     env_type = None
     if game is not None:
@@ -72,7 +74,6 @@ def get_env_type(game=None, env=None):
     return env_type
     
 
-
 # adapted from https://github.com/ikostrikov/pytorch-a2c-ppo-acktr/blob/master/envs.py
 ## refactored, func for unity added, by nov05
 def get_env_fn(game, ## could be called "id", "env_id" in other functions
@@ -83,6 +84,7 @@ def get_env_fn(game, ## could be called "id", "env_id" in other functions
     
     ## get env type
     env_type =get_env_type(game=game)
+    ## add kwargs for different env types
     kwargs = dict()
     if env_type=='unity':
         kwargs.update(env_fn_kwargs)
@@ -93,9 +95,10 @@ def get_env_fn(game, ## could be called "id", "env_id" in other functions
     else: ## env_type=='gym'
         kwargs.update({'id':game})
 
+    ## wrap the env
     if env_type=='unity':
-        ## can't wrap unity env here. define info['episodic_return'] in return  
-        ## later in the UnityVecEnv and UnitySubprocVecEnv implementations 
+        ## The Unity env instance can't be applied with wrapp class.  
+        ## Define info['episodic_return'] in return in its superclass, the UnityVecEnv and UnitySubprocVecEnv.
         env_fn = env_fn_mappings[env_type](**kwargs)
     else:
         env = env_fn_mappings[env_type](**kwargs)
@@ -120,6 +123,8 @@ def get_env_fn(game, ## could be called "id", "env_id" in other functions
 
 
 
+## This wrapper class adds total_reward to info['episodic_return'] in the return
+## of the original environment class.
 class OriginalReturnWrapper(gym.Wrapper):
     def __init__(self, env):
         gym.Wrapper.__init__(self, env)
@@ -253,13 +258,43 @@ def get_unity_spaces(brain_params: BrainParameters):
 
 
 
-def get_return_from_brain_info(brain_info: BrainInfo, brain_name):
+## for Unity envs
+def get_return_from_brain_info(env, 
+                               brain_name, 
+                               phase, 
+                               brain_info: BrainInfo):
     if brain_name in ['ReacherBrain', 'TennisBrain']:
         observation = brain_info.vector_observations 
     else:
         raise NotImplementedError
+    
+    if brain_name in ['ReacherBrain']:
+        mode = 'avg'  ## calculate the average of the total scores for each agent
+    elif brain_name in ['TennisBrain']:
+        mode = 'max'  ## take the maximum of the total scores of each agent
+    
     reward, done = brain_info.rewards, brain_info.local_done
-    return observation, reward, done
+    info = {'brain_info': brain_info}
+    num_agents = len(brain_info.agents)
+    ## env.total_reward: accumulated reward for each agent at the end of each episode
+    if env.total_reward is None:
+        env.total_reward = [0] * num_agents  
+    env.total_reward = np.add(env.total_reward, reward)  ## a list
+
+    if phase=='step':
+        if np.any(done): ## one env has multi-agents hence done has multiple values
+            if mode=='avg':
+                info['episodic_return'] = np.sum(env.total_reward) / num_agents  ## single value
+            elif mode=='max':
+                info['episodic_return'] = np.max(env.total_reward)  ## single value
+            else:
+                raise NotImplementedError
+            env.total_reward = [0] * num_agents  ## reset episode total reward for each agent
+    elif phase=='reset':
+        info = {'brain_info': brain_info,
+                'episodic_return': 0}
+
+    return observation, reward, done, info
 
 
 
@@ -271,14 +306,15 @@ class UnityVecEnv(VecEnv):
     def __init__(self, env_fns=None, train_mode=False):
         self.envs = [fn() for fn in env_fns]
         self.train_mode = train_mode
-        ## add total_reward attribute, refer to class OriginalReturnWrapper(gym.Wrapper)
-        for env in self.envs:
-            env.total_reward = 0
-        
+
         env = self.envs[0]
         self.brain_name = env.brain_names[0]
         brain_params = env.brains[self.brain_name]
         self.action_size = brain_params.vector_action_space_size
+
+        ## add total_reward attribute, refer to class OriginalReturnWrapper(gym.Wrapper)
+        for env in self.envs:
+            env.total_reward = None
 
         ## reset envs
         _, _, _, infos = self.reset(train_mode=train_mode)
@@ -289,39 +325,32 @@ class UnityVecEnv(VecEnv):
         observation_space, action_space = get_unity_spaces(brain_params)
         VecEnv.__init__(self, self.num_envs, observation_space, action_space)
 
+
     def step_async(self, actions): ## VecEnv downward func
         self.actions = actions
+
 
     def step_wait(self): ## VecEnv downward func
         data = []
         for env,action in zip(self.envs, self.actions):
             brain_info = env.step(action)[self.brain_name]
-            observation, reward, done = get_return_from_brain_info(brain_info, self.brain_name)  
-            info = {'brain_info': brain_info}
-            env.total_reward += np.sum(reward)
-            if np.any(done): ## one env has multi-agents hence done has multiple values
-                info['episodic_return'] = env.total_reward / len(brain_info.agents)
-                env.total_reward = 0
-                # brain_info = env.reset(train_mode=self.train_mode)[self.brain_name]
-                # observation, _, _ = get_return_from_brain_info(brain_info, self.brain_name)
-            else:
-                info['episodic_return'] = None
+            observation, reward, done, info = get_return_from_brain_info(env, self.brain_name, 'step', brain_info)  
             data.append([observation, reward, done, info])
         observations, rewards, dones, infos = zip(*data)
         return observations, np.asarray(rewards), np.asarray(dones), infos
+
 
     def reset(self, train_mode=None):
         ## reset an env, returning AllBrainInfo
         data = []
         for env in self.envs:
             brain_info = env.reset(train_mode=train_mode)[self.brain_name]
-            observation, reward, done = get_return_from_brain_info(brain_info, self.brain_name)
-            info = {'brain_info': brain_info}
-            info['episodic_return'] = None
+            observation, reward, done, info = get_return_from_brain_info(env, self.brain_name, 'reset', brain_info)
             data.append([observation, reward, done, info])
             print('🟢 Unity environment has been resetted.')
         observations, rewards, dones, infos = zip(*data)
         return observations, np.asarray(rewards), np.asarray(dones), infos
+
 
     def close(self):
         [env.close() for env in self.envs]
@@ -333,7 +362,7 @@ def unity_worker(remote, parent_remote, env_fn_wrapper, train_mode):
     env = env_fn_wrapper.x()
     brain_name = env.brain_names[0]
     ## add total_reward attribute, refer to class OriginalReturnWrapper(gym.Wrapper)
-    env.total_reward = 0
+    env.total_reward = None
     try:
         while True:
             cmd, data = remote.recv()
@@ -341,23 +370,11 @@ def unity_worker(remote, parent_remote, env_fn_wrapper, train_mode):
                 ## type AllBrainInfo, a dict
                 ## e.g. {'ReacherBrain': <unityagents.brain.BrainInfo object at 0x0000022605F2D8A0>}
                 brain_info = env.step(data)[brain_name] ## info type ".unityagents.brain.BrainInfo"
-                observation, reward, done = get_return_from_brain_info(brain_info, brain_name)
-                env.total_reward += np.sum(reward)
-                info = {'brain_info': brain_info}
-                if np.any(done): ## one env has multi-agents hence done has multiple values
-                    ## in "deeprl.agent.BaseAgent", ret = info[0]['episodic_return']
-                    info['episodic_return'] = env.total_reward / len(brain_info.agents)
-                    env.total_reward = 0
-                    # brain_info = env.reset(train_mode=train_mode)[brain_name] 
-                    # observation, _, _ = get_return_from_brain_info(brain_info, brain_name)
-                else:
-                    info['episodic_return'] = None
+                observation, reward, done, info = get_return_from_brain_info(env, brain_name, 'step', brain_info)
                 remote.send((observation, reward, done, info))
             elif cmd=='reset':
                 brain_info = env.reset(data)[brain_name]
-                observation, reward, done = get_return_from_brain_info(brain_info, brain_name)
-                info = {'brain_info': brain_info}
-                info['episodic_return'] = None
+                observation, reward, done, info = get_return_from_brain_info(env, brain_name, 'reset', brain_info)
                 remote.send((observation, reward, done, info))
                 print('🟢 Unity environment has been resetted.')
             elif cmd=='close':
@@ -421,11 +438,13 @@ class UnitySubprocVecEnv(VecEnv):
 
         VecEnv.__init__(self, len(env_fns), observation_space, action_space)
 
+
     def step_async(self, actions):
         self._assert_not_closed()
         for remote, action in zip(self.remotes, actions):
             remote.send(('step', action))
         self.waiting = True
+
 
     def step_wait(self):
         self._assert_not_closed()
@@ -433,6 +452,7 @@ class UnitySubprocVecEnv(VecEnv):
         self.waiting = False
         observations, rewards, dones, infos = zip(*data)
         return np.stack(observations), np.stack(rewards), np.stack(dones), infos
+
 
     def reset(self, train_mode=None):
         """
@@ -446,6 +466,7 @@ class UnitySubprocVecEnv(VecEnv):
         observations, rewards, dones, infos = zip(*data)
         return np.stack(observations), np.stack(rewards), np.stack(dones), infos
 
+
     def close_extras(self):
         self.closed = True
         if self.waiting:
@@ -456,8 +477,10 @@ class UnitySubprocVecEnv(VecEnv):
         for p in self.ps:
             p.join()
 
+
     def _assert_not_closed(self):
         assert not self.closed, "⚠️ Trying to operate on a UnitySubprocVecEnv object after calling close()"
+
 
     def __del__(self):
         if not self.closed:

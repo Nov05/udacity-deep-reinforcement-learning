@@ -10,6 +10,8 @@
 
 ## **👉 Unity enviroment `Tennis` vector game (Project Submission)**  
 
+✅ **Project description**  
+
 * check the [project information](https://github.com/Nov05/udacity-deep-reinforcement-learning/tree/master/p3_collab-compet) (multi-agent reinforcement learning (MARL))    
 * check the [course notes](https://www.evernote.com/shard/s139/sh/3207cf3f-bcca-a008-c221-45bbd101af72/qBMCR47uxmw1ied7hOLgWCxDfJFWUgoKErH3sbCLoIOTVUIw0x_YVyPiBw)    
 
@@ -25,9 +27,20 @@ The task is episodic, and in order to solve the environment, your agents must ge
 The environment is considered solved, when the average (over 100 episodes) of those **scores** is at least +0.5.
  
 
+✅ **Multi-Agent Deep Deterministic Policy Gradient (MADDPG) solution**  
+
+* [**MADDPG**, or **Multi-agent DDPG**](https://paperswithcode.com/method/maddpg), extends DDPG into a multi-agent policy gradient algorithm where decentralized agents learn a centralized critic based on the observations and actions of all agents. It leads to learned policies that only use local information (i.e. their own observations) at execution time, does not assume a differentiable model of the environment dynamics or any particular structure on the communication method between agents, and is applicable not only to cooperative interaction but to competitive or mixed interaction involving both physical and communicative behavior. The critic is augmented with extra information about the policies of other agents, while the actor only has access to local information. After training is completed, only the local actors are used at execution phase, acting in a decentralized manner.  
+<img src="https://raw.githubusercontent.com/Nov05/pictures/refs/heads/master/Udacity/20231221_reinforcement%20learning/Screen_Shot_2020-06-04_at_10.11.20_PM.png" width=300>    
+
+* Multi-environments, implemented using the `multiprocessing` library (check the file `..\python\baselines\baselines\common\vec_env\subproc_vec_env.py`), can be used for parallel training here, which can add diversity to the experiences. Additionally, asynchronous stepping may help speed up the training process.  
+
+* I’m borrowing the 'brain' concept from Unity environments, so I refer to the control unit of an agent as a 'brain,' for example, the neural networks here. For instance, in the case of 3 environments with 2 agents per environment, a total of 2 agent brains will be created. Each brain processes its own observation and generates an action in each environment independently, controlling 2 agents within each environment, also updating its own neural networks independently. This means that an agent brain receives 3 observations (one from each environment) and generates 3 corresponding actions for the 3 environments. The 'x, r, a, x_prime' sequences from all the environments will be stored in a single replay buffer D. 
+
+
 ✅ **setup Python environment**   
 * [notes for env setup](https://gist.github.com/Nov05/36ed6fff08f16f29c364090844eb1d24)  
 * [notes for issues](https://gist.github.com/Nov05/1d49183a91456a63e13782e5f49436be?permalink_comment_id=4935583#gistcomment-4935583)
+
 
 
 ✅ **reference**  
@@ -36,8 +49,10 @@ https://arxiv.org/pdf/1706.02275
 <img src="https://raw.githubusercontent.com/Nov05/pictures/refs/heads/master/Udacity/20231221_reinforcement%20learning/2024-10-18%2023_11_36-Multi-Agent%20Deep%20Deterministic%20Policy%20Gradient%20for%20N%20agents.jpg" width=500>  
 
 
-✅ **coding**
-* add the brain name **'TennisBrain'** in `..\python\deeprl\component\envs.py` function `get_return_from_brain_info`.    
+✅ **Coding**
+
+* Add the brain name **'TennisBrain'** in `..\python\deeprl\component\envs.py` function `get_return_from_brain_info`.  
+
 * An env has 2 agents playing with each other. Refer to [this notebook](https://github.com/Nov05/udacity-deep-reinforcement-learning/blob/master/p3_collab-compet/Tennis.ipynb).  
 ``` 
   Number of agents: 2
@@ -52,6 +67,12 @@ https://arxiv.org/pdf/1706.02275
     0.          0.          0.          0.         -6.65278625 -1.5
    -0.          0.          6.83172083  6.         -0.          0.        ]
 ```
+
+* Create `class MADDPGAgent(BaseAgent)` in file `..\python\deeprl\agent\MADDPG_agent.py`.
+
+* Create train and eval functions in file `..\python\experiments\deeprl_maddpg_continuous.py`.  
+
+* In the `get_env_fn()` function, located in `..\python\deeprl\component\envs.py`, for `Gym` games, the environment class is wrapped using `OriginalReturnWrapper()`. Inside the wrapper class's `step()` and `reset()` method, `info['episodic_return'] = self.total_rewards` is defined. However, for `Unity` games, the environment is already instantiated at the same location, so it can't be wrapped with an wrapper class. Instead, we define `info['episodic_return']` within classes `UnityVecEnv` and `UnitySubprocVecEnv`, which call the `get_return_from_brain_info()` function where `info` is actually populated. And for the `Tennis` game, we add up the rewards that each agent received (without discounting), to get a score for each agent, which yields 2 (potentially different) scores, and we take the maximum of these 2 scores as the episodic return.
 
 <br><br><br>  
 

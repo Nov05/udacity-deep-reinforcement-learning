@@ -108,7 +108,8 @@ class BaseAgent:
             ret = np.mean(info)
             self.logger.add_scalar('episodic_return_train', ret, self.total_steps)
             log_info = f"Step {self.total_steps}, episodic_return_train {ret}"
-            if by_episode: log_info = f"Episode {self.total_episodes}, " + log_info
+            if by_episode: 
+                log_info = f"Episode {self.total_episodes}, " + log_info
             self.logger.info(log_info)
         else:
             raise NotImplementedError

@@ -3,6 +3,8 @@
 # Permission given to modify the code as long as you keep this        #
 # declaration at the top                                              #
 #######################################################################
+## 2024-04-01 by nov05, async became a reserved keyword in Python>=3.7, changed to is_async
+
 
 import torch
 import numpy as np
